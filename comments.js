@@ -4,7 +4,7 @@ const repost = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0
 const reply = `<svg xmlns="http://www.w3.org/2000/svg" fill="#7FBADC" viewBox="0 0 24 24" stroke-width="1.5" stroke="#7FBADC" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z"></path></svg>`
 
 // finds the user DID and loads the comments automatically from a simple URL
-async function loadCommentsURL(url) {
+async function loadCommentsURL(url, options={}) {
   const API_URL = "https://bsky.social/xrpc/com.atproto.identity.resolveHandle";
   const trimmed = url.split("/profile/").slice(1).join("");
   const user = trimmed.split("/post/")[0];
@@ -28,11 +28,12 @@ async function loadCommentsURL(url) {
 
   const did = await getDID(user);
   console.log(did);
-  loadComments("at://" + did + "/app.bsky.feed.post/" + post);
+  loadComments("at://" + did + "/app.bsky.feed.post/" + post, options);
 }
 
 // Basic, faster way to load comments. It gets called either way.
-async function loadComments(rootPostId) {
+// if options has a renderOptions key, its value is passed to renderComments.
+async function loadComments(rootPostId, options={}) {
   const API_URL = "https://api.bsky.app/xrpc/app.bsky.feed.getPostThread";
   let hostAuthor = ""
 
@@ -56,12 +57,38 @@ async function loadComments(rootPostId) {
     return (url);
   }
 
-  // TO-DO make this optional??? Sort type?
-  function sortCommentsByTime(comments) {
+  //See: https://docs.bsky.app/docs/advanced-guides/timestamps#sortat
+  function calculateSortAtTimestamp(post) {
+    createdAt = new Date(post.record?.createdAt).getTime();
+    indexedAt = new Date(post?.indexedAt).getTime();
+    if (createdAt < 0) {
+      return 0;
+    } else if (createdAt <= indexedAt) {
+      return createdAt;
+    } else if (createdAt > indexedAt) {
+      return indexedAt;
+    }
+  }
+
+  // See: https://docs.bsky.app/docs/advanced-guides/timestamps
+  // Default to 'sortAt' but allow specifying other timestamps.
+  function sortCommentsByTime(comments, tsKey='sortAt') {
+    if (! ['sortAt', 'createdAt', 'indexedAt'].includes(tsKey) ) {
+      //invalid ts key value
+      console.log("Invalid tsKey value " + tsKey + " passed to sortCommentsByTime! Setting to default value 'sortAt'.");
+      tsKey = 'sortAt';
+    }
     return comments.sort((a, b) => {
-      const timeA = new Date(a.post.record?.createdAt).getTime();
-      const timeB = new Date(b.post.record?.createdAt).getTime();
-      return timeA - timeB; // Ascending order
+      if (tsKey == 'sortAt') {
+        //grumble grumble have to calculate sortAt myself...
+        const timeA = calculateSortAtTimestamp(a.post);
+        const timeB = calculateSortAtTimestamp(b.post);
+        return timeA - timeB; // Ascending order
+      } else {
+        const timeA = new Date(a.post.record?.[tsKey]).getTime();
+        const timeB = new Date(b.post.record?.[tsKey]).getTime();
+        return timeA - timeB; // Ascending order
+      }
     });
   }
 
@@ -144,8 +171,10 @@ async function loadComments(rootPostId) {
     return post;
   }
 
-  // TO-DO... options? Newest first? No prioritization? Author Override?
-  function sortComments(comments) {
+  // TO-DO... other options? Newest first? No prioritization? Author Override?
+  // if options contains a "tsKey" key, its value is passed to sortCommentsbyTime.
+  function sortComments(comments, options={}) {
+
     const prioritizedReplies = comments.filter(
       comment => comment.post?.author?.displayName === hostAuthor
     );
@@ -153,13 +182,14 @@ async function loadComments(rootPostId) {
       comment => comment.post?.author?.displayName !== hostAuthor
     );
 
-    const orderedComments = [...prioritizedReplies, ...sortCommentsByTime(otherReplies)];
+    const orderedComments = [...prioritizedReplies, ...sortCommentsByTime(otherReplies, options?.tsKey)];
     return orderedComments;
   }
 
   // Iterates through the whole thread.
-  function renderComments(comments, container, hiddenReplies) {
-    const orderedComments = sortComments(comments);
+  // if options contains a "sortOptions" key, its value is passed to sortComments
+  function renderComments(comments, container, hiddenReplies, options={}) {
+    const orderedComments = sortComments(comments, options?.sortOptions);
 
     orderedComments.forEach(comment => {
       if (!comment.post) {
@@ -179,7 +209,7 @@ async function loadComments(rootPostId) {
       if (comment.replies && comment.replies.length > 0) {
         const repliesContainer = document.createElement("div");
         repliesContainer.classList.add("comment-replies");
-        renderComments(sortCommentsByTime(comment.replies), repliesContainer, hiddenReplies);
+        renderComments(sortCommentsByTime(comment.replies, options?.sortOptions?.tsKey), repliesContainer, hiddenReplies, options);
         container.appendChild(repliesContainer);
       }
     });
@@ -210,7 +240,7 @@ async function loadComments(rootPostId) {
     // Render only replies, omitting the root post
     if (commentData.thread.replies && commentData.thread.replies.length > 0) {
       hostAuthor = commentData.thread.post.author.displayName
-      renderComments(sortCommentsByTime(commentData.thread.replies), container, commentHidden);
+      renderComments(sortCommentsByTime(commentData.thread.replies, options?.renderOptions?.sortOptions?.tsKey), container, commentHidden, options?.renderOptions);
     }
   }
 }
