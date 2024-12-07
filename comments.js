@@ -1,7 +1,24 @@
 // SVGs
-const heart = '<svg xmlns="http://www.w3.org/2000/svg" fill="#71153b" viewBox="0 0 24 24" stroke-width="1.5" stroke="#71153b class="size-5" color="pink"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"></path></svg>'
-const repost = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3"></path></svg>`
-const reply = `<svg xmlns="http://www.w3.org/2000/svg" fill="#7FBADC" viewBox="0 0 24 24" stroke-width="1.5" stroke="#7FBADC" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z"></path></svg>`
+let heart  = '<svg xmlns="http://www.w3.org/2000/svg" fill="#71153b" viewBox="0 0 24 24" stroke-width="1.5" stroke="#71153b class="size-5" color="pink"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"></path></svg>'
+let repost = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="green" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3"></path></svg>`
+let reply  = `<svg xmlns="http://www.w3.org/2000/svg" fill="#7FBADC" viewBox="0 0 24 24" stroke-width="1.5" stroke="#7FBADC" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z"></path></svg>`
+
+let postTemplate   = null; // Change by doing something like: loadCommentTemplate("comments.template.html")
+let metricTemplate = null; // Same Deal, but with loadMetricTemplate
+
+async function loadCommentTemplate(url) {
+  postTemplate = await loadTemplate(url);
+}
+
+async function loadMetricTemplate(url) {
+  metricTemplate = await loadTemplate(url);
+}
+
+// loads optional templates
+async function loadTemplate(url) {
+  const response = await fetch(url);
+  return response.text();
+}
 
 // finds the user DID and loads the comments automatically from a simple URL
 async function loadCommentsURL(url, options={}) {
@@ -49,6 +66,19 @@ async function loadComments(rootPostId, options={}) {
       console.error("Error fetching comments:", error);
       return null;
     }
+  }
+
+  async function fetchTemplate(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to load template: ${url}`);
+    return response.text();
+  }
+  
+  function replacePlaceholders(template, data) {
+    return Object.entries(data).reduce(
+      (output, [key, value]) => output.replaceAll(`{{${key}}}`, value ?? ''),
+      template
+    );
   }
 
   // Converts one of those at:// uris into an actual link usable by humans
@@ -154,22 +184,34 @@ async function loadComments(rootPostId, options={}) {
     const embeds = comment.post?.embed ?? comment.record?.embeds[0] ?? "";
     const uri = comment.post?.uri ?? comment.record?.uri ?? "";
 
-    // So the host can get fancy CSS and look extra important
-    if (author.displayName == hostAuthor) {
-      post.classList.add("comment-host");
-    }
+  // Use custom template if available
+  const template = postTemplate || `
+    <div class="comment-innerbox">
+      <img class="comment-avatar" src="{{avatar}}">
+      <div>
+        <span class="comment-meta">
+          By <a href="https://bsky.app/profile/{{handle}}">
+            {{name}}
+          </a> on 
+          <a href="{{url}}">{{date}}</a>
+        </span>
+        <p class="comment-text">{{text}}</p>
+      </div>
+    </div>
+  `;
 
-    post.innerHTML = `<div class="comment-innerbox">
-    <img class="comment-avatar" src="${author.avatar}"><div>
-    <span class="comment-meta">By <a href="https://bsky.app/profile/${author.handle}">
-        ${author.displayName || author.handle || "Unknown"}
-    </a> on <a href="${convertURI(uri)}">${new Date(record?.createdAt || Date.now()).toLocaleString()}</a></span>
-    <p class="comment-text">${record?.text}<p></div></div>`;
+  // Replace placeholders dynamically
+  post.innerHTML = template
+    .replace("{{avatar}}", author.avatar || "")
+    .replace("{{name}}", author.displayName || author.handle || "Unknown")
+    .replace("{{handle}}", author.handle || "")
+    .replace("{{text}}", record?.text || "")
+    .replace("{{date}}", new Date(record?.createdAt || Date.now()).toLocaleString())
+    .replace("{{url}}", convertURI(uri))
 
-    post.appendChild(renderEmbeds(embeds));
-
-    return post;
-  }
+  post.appendChild(renderEmbeds(embeds));
+  return post;
+}
 
   // TO-DO... other options? Newest first? No prioritization? Author Override?
   // if options contains a "tsKey" key, its value is passed to sortCommentsbyTime.
@@ -227,15 +269,24 @@ async function loadComments(rootPostId, options={}) {
       commentHidden.push(...commentData.threadgate.record.hiddenReplies);
     }
 
-    // Should all this header/metrics stuff be somewhere else?
     const container = document.getElementById("comments-container");
-    container.innerHTML = `<p class="comment-metricsbox"><a class="comment-metricslink" href="${postURL}">
-    <span class="comment-metrics">${heart} ${commentData.thread.post.likeCount} Likes</span> 
-    <span class="comment-metrics">${repost} ${commentData.thread.post.repostCount + commentData.thread.post.quoteCount} Reposts</span>
-    <span class="comment-metrics">${reply} ${commentData.thread.post.replyCount} Replies</span></a>
-    <a style="color: inherit;text-decoration: inherit" href="#comments-container"><div><h3>Comments</h3></div></a>
-    Reply on Bluesky <a href="${postURL}">to this post</a> to add a Comment   
-    </p>`;
+    const template = metricTemplate || `
+      <p class="comment-metricsbox"><a class="comment-metricslink" href="{{url}}">
+        <span class="comment-metrics">{{heart}} {{likeCount}} Likes</span> 
+        <span class="comment-metrics">{{repost}} {{repostCount}} Reposts</span>
+        <span class="comment-metrics">{{reply}} {{replyCount}} Replies</span></a>
+        <a style="color: inherit;text-decoration: inherit" href="#comments-container"><div><h3>Comments</h3></div></a>
+        Reply on Bluesky <a href="{{url}}">to this post</a> to add a Comment   
+      </p>`;
+
+    container.innerHTML = template
+      .replace("{{heart}}", heart || "")
+      .replace("{{repost}}", repost || "")
+      .replace("{{reply}}", reply || "")
+      .replace("{{likeCount}}", commentData.thread.post.likeCount || "")
+      .replace("{{repostCount}}", commentData.thread.post.repostCount + commentData.thread.post.quoteCount || "")
+      .replace("{{replyCount}}", commentData.thread.post.replyCount) || ""
+      .replace("{{url}}", postURL || "");
 
     // Render only replies, omitting the root post
     if (commentData.thread.replies && commentData.thread.replies.length > 0) {

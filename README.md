@@ -22,8 +22,10 @@ A minimal version of the comment embed is included.
     <body>
         <div id="comments-container"></div>
         <script>
-            //loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")
-            loadCommentsURL("bsky.app/profile/kayin.moe/post/3lbb32nb4322g")
+            //loadCommentTemplate("comments.template.html")
+            //loadMetricTemplate("metrics.template.html")
+            loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")
+            //loadCommentsURL("bsky.app/profile/kayin.moe/post/3lbb32nb4322g")
         </script>
     </body>
 </html>
@@ -31,7 +33,9 @@ A minimal version of the comment embed is included.
 
 The key point is that you call either **loadCommentsURL** or **loadComments** (just uncomment the one you wanna try) with an appropriate info. The `did:plc` bit is your actual user code, which [you could get here](https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=kayin.moe)*(using my handle as an example).*, and the last bit `3lbb32nb4322g` is the Post ID, which can be replaced by whatever string is the end of the post you want to use. 
 
-LoadCommentsURL saves you from worrying about what your DID but it makes two API calls instead of one, so it renders slower. This isn't super important, but it's preferable to use loadCommentsURL if you can hardcode your DID. The 
+LoadCommentsURL saves you from worrying about what your DID but it makes two API calls instead of one, so it renders slower. This isn't super important, but it's preferable to use loadCommentsURL if you can hardcode your DID. The difference in speed is pretty significant, a second or two vs almost instant, but in the context of a comment section under a blog post this might not matter much for you.
+
+You also have access to very simple **templates**, which you can invoke with **loadCommentTemplate**(for the comments) and **loadMetricTemplate**(for the header), giving a bit more flexibility. The included example templates are the default, but these files are not needed by the script if you want to run with completely default settings.
 
 Depending on your setup, sometimes you need to delay calling either function. On my blog (which is running on grav) I use...
 
@@ -51,7 +55,7 @@ The only other important thing is having a div with the id `comments-container`,
 
 If you wanna see how things look, and what works, the example thread is filled with different types of embedded content, some of which is or isn't supported. The **index.html** file will work without a live server, just open it up and poke around.
 
-You can also see an example [over on my blog](https://kayin.moe/why-play-a-remake)
+You can also see an example [over on my blog](https://kayin.moe/why-play-a-remake#comments-container)
 
 ### What works
 
@@ -59,6 +63,7 @@ You can also see an example [over on my blog](https://kayin.moe/why-play-a-remak
 - Embeds work
 - Posts hidden on a thread will be hidden here!
 - Highlights and prioritizes the comments made by the original poster
+- Templates!
 
 ### What doesn't work
 - ~~Embedded links and youtube videos and stuff *(KINDA implemented, but not really)*~~
@@ -70,3 +75,5 @@ You can also see an example [over on my blog](https://kayin.moe/why-play-a-remak
 - ~~Make it so someone can just provide a post URL and have the script figure out the details.~~
 - Better Handling of multi image threads
 - Maybe more example implementations? 
+
+This project is under the Unlicense. You can do what you will with it and modify it as you like. I feel like you have to modify it to do anything useful with it. You are under no obligation to credit me or send any feature improvements back, but please consider it! Also while you don't gotta, I'd love if you told me if you used this over [on bluesky](https://bsky.app/profile/kayin.moe).

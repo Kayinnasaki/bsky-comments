@@ -92,7 +92,7 @@ p.comment-text {
     max-width: 100%;
 }
 
-.comment-embedbox-thumb>a {
+.comment-embedbox-thumb > a {
     color: black;
     text-decoration: none;
 }
