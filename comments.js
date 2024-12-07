@@ -4,14 +4,14 @@ let repost = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 2
 let reply  = `<svg xmlns="http://www.w3.org/2000/svg" fill="#7FBADC" viewBox="0 0 24 24" stroke-width="1.5" stroke="#7FBADC" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z"></path></svg>`
 
 let postTemplate   = null; // Change by doing something like: loadCommentTemplate("comments.template.html")
-let metricTemplate = null; // Same Deal, but with loadMetricTemplate
+let headerTemplate = null; // Same Deal, but with loadHeaderTemplate
 
 async function loadCommentTemplate(url) {
   postTemplate = await loadTemplate(url);
 }
 
-async function loadMetricTemplate(url) {
-  metricTemplate = await loadTemplate(url);
+async function loadHeaderTemplate(url) {
+  headerTemplate = await loadTemplate(url);
 }
 
 // loads optional templates
@@ -102,25 +102,38 @@ async function loadComments(rootPostId, options={}) {
 
   // See: https://docs.bsky.app/docs/advanced-guides/timestamps
   // Default to 'sortAt' but allow specifying other timestamps.
-  function sortCommentsByTime(comments, tsKey='sortAt') {
-    if (! ['sortAt', 'createdAt', 'indexedAt'].includes(tsKey) ) {
-      //invalid ts key value
-      console.log("Invalid tsKey value " + tsKey + " passed to sortCommentsByTime! Setting to default value 'sortAt'.");
-      tsKey = 'sortAt';
+  function sortCommentsByTime(comments, options) {
+    let tsKey = options?.tsKey ?? 'sortAt';
+    let order = options?.order ?? 'asc';
+
+    if (!['sortAt', 'createdAt', 'indexedAt'].includes(tsKey)) {
+        // Invalid ts key value
+        console.log("Invalid tsKey value " + tsKey + " passed to sortCommentsByTime! Setting to default value 'sortAt'.");
+        tsKey = 'sortAt';
     }
+
+    if (!['asc', 'desc'].includes(order)) {
+        // Invalid order value
+        console.log("Invalid order value " + order + " passed to sortCommentsByTime! Setting to default value 'asc'.");
+        order = 'asc';
+    }
+
+    // Sort Order Fuckery
+    const sortMultiplier = order === 'asc' ? 1 : -1;
+
     return comments.sort((a, b) => {
-      if (tsKey == 'sortAt') {
-        //grumble grumble have to calculate sortAt myself...
-        const timeA = calculateSortAtTimestamp(a.post);
-        const timeB = calculateSortAtTimestamp(b.post);
-        return timeA - timeB; // Ascending order
-      } else {
-        const timeA = new Date(a.post.record?.[tsKey]).getTime();
-        const timeB = new Date(b.post.record?.[tsKey]).getTime();
-        return timeA - timeB; // Ascending order
-      }
+        if (tsKey === 'sortAt') {
+            // Calculate sortAt timestamp
+            const timeA = calculateSortAtTimestamp(a.post);
+            const timeB = calculateSortAtTimestamp(b.post);
+            return (timeA - timeB) * sortMultiplier;
+        } else {
+            const timeA = new Date(a.post.record?.[tsKey]).getTime();
+            const timeB = new Date(b.post.record?.[tsKey]).getTime();
+            return (timeA - timeB) * sortMultiplier;
+        }
     });
-  }
+}
 
   // Can things be multiple kinds of embeds at once????
   function renderEmbeds(embed) {
@@ -184,7 +197,7 @@ async function loadComments(rootPostId, options={}) {
     const embeds = comment.post?.embed ?? comment.record?.embeds[0] ?? "";
     const uri = comment.post?.uri ?? comment.record?.uri ?? "";
 
-  // Use custom template if available
+  // Render Comments with either the default or an external file
   const template = postTemplate || `
     <div class="comment-innerbox">
       <img class="comment-avatar" src="{{avatar}}">
@@ -200,7 +213,6 @@ async function loadComments(rootPostId, options={}) {
     </div>
   `;
 
-  // Replace placeholders dynamically
   post.innerHTML = template
     .replace("{{avatar}}", author.avatar || "")
     .replace("{{name}}", author.displayName || author.handle || "Unknown")
@@ -213,7 +225,7 @@ async function loadComments(rootPostId, options={}) {
   return post;
 }
 
-  // TO-DO... other options? Newest first? No prioritization? Author Override?
+  // TO-DO... No prioritization? Author Override?
   // if options contains a "tsKey" key, its value is passed to sortCommentsbyTime.
   function sortComments(comments, options={}) {
 
@@ -224,7 +236,7 @@ async function loadComments(rootPostId, options={}) {
       comment => comment.post?.author?.displayName !== hostAuthor
     );
 
-    const orderedComments = [...prioritizedReplies, ...sortCommentsByTime(otherReplies, options?.tsKey)];
+    const orderedComments = [...prioritizedReplies, ...sortCommentsByTime(otherReplies, options)];
     return orderedComments;
   }
 
@@ -251,13 +263,17 @@ async function loadComments(rootPostId, options={}) {
       if (comment.replies && comment.replies.length > 0) {
         const repliesContainer = document.createElement("div");
         repliesContainer.classList.add("comment-replies");
-        renderComments(sortCommentsByTime(comment.replies, options?.sortOptions?.tsKey), repliesContainer, hiddenReplies, options);
+        renderComments(sortCommentsByTime(comment.replies, options?.sortOptions), repliesContainer, hiddenReplies, options);
         container.appendChild(repliesContainer);
       }
     });
   }
 
   // Actual Logic begins here!!
+
+  // Loads Custom Templates from option object
+  if (options?.renderOptions?.commentTemplate) { loadCommentTemplate(options.renderOptions.commentTemplate); }
+  if (options?.renderOptions?.headerTemplate)  { loadHeaderTemplate(options.renderOptions.headerTemplate); }
 
   const commentData = await fetchComments(rootPostId);
 
@@ -269,8 +285,9 @@ async function loadComments(rootPostId, options={}) {
       commentHidden.push(...commentData.threadgate.record.hiddenReplies);
     }
 
+    // Render Header with either the default or an external file
     const container = document.getElementById("comments-container");
-    const template = metricTemplate || `
+    const template = headerTemplate || `
       <p class="comment-metricsbox"><a class="comment-metricslink" href="{{url}}">
         <span class="comment-metrics">{{heart}} {{likeCount}} Likes</span> 
         <span class="comment-metrics">{{repost}} {{repostCount}} Reposts</span>
@@ -291,7 +308,7 @@ async function loadComments(rootPostId, options={}) {
     // Render only replies, omitting the root post
     if (commentData.thread.replies && commentData.thread.replies.length > 0) {
       hostAuthor = commentData.thread.post.author.displayName
-      renderComments(sortCommentsByTime(commentData.thread.replies, options?.renderOptions?.sortOptions?.tsKey), container, commentHidden, options?.renderOptions);
+      renderComments(sortCommentsByTime(commentData.thread.replies, options?.renderOptions?.sortOptions), container, commentHidden, options?.renderOptions);
     }
   }
 }

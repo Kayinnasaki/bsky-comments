@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Comments</title>
-        <link rel="stylesheet" href="comments.css">
-        <script src="comments.js"></script>
-    </head>
-    <body>
-        <div id="comments-container"></div>
-        <script>
-            //loadCommentTemplate("comments.template.html")
-            //loadMetricTemplate("metrics.template.html")
-            // loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g", {"renderOptions":{"sortOptions":{"tsKey":'createdAt'}}})
-            loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")
-            //loadCommentsURL("bsky.app/profile/kayin.moe/post/3lbb32nb4322g")
-        </script>
-    </body>
+
+<head>
+    <title>Comments</title>
+    <link rel="stylesheet" href="comments.css">
+    <script src="comments.js"></script>
+</head>
+
+<body>
+    <div id="comments-container"></div>
+    <script>
+        // Loads comments from a post's URI and user DID
+        loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")
+
+        // Loads comments from a post's URL
+        //loadCommentsURL("bsky.app/profile/kayin.moe/post/3lbb32nb4322g")
+
+        // Sets custom templates before loading comments
+        //loadCommentTemplate("comments.template.html")
+        //loadMetricTemplate("metrics.template.html")
+        //loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")
+
+        // Sets custom options as an object, including sorting by creation date, as well as having descending posts
+        //loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g", { "renderOptions": { "commentTemplate": 'comments.template.html', "headerTemplate": 'header.template.html', "sortOptions": { "tsKey": 'createdAt', "order": 'desc' } } })
+
+
+    </script>
+</body>
+
 </html>
