@@ -34,6 +34,29 @@ async function loadTemplate(url) {
   return response.text();
 }
 
+// inspired by czue (https://github.com/czue/bluesky-comments)
+// query the author's page to discover the post
+async function discoverPost(authorHandle) {
+  const currentUrl = window.location.href;
+  const apiUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=*&url=${encodeURIComponent(
+    currentUrl
+  )}&author=${authorHandle}&sort=top`;
+
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (data.posts && data.posts.length > 0) {
+      const post = data.posts[0];
+      loadComments(post.uri);
+    } else {
+      console.log('No matching post found linking to ' + currentUrl);
+    }
+  } catch (err) {
+    console.log('Error attempting to fetch post at ' + currentUrl);
+  }
+}
+
 // finds the user DID and loads the comments automatically from a simple URL
 async function loadCommentsURL(url, options={}) {
   const API_URL = "https://bsky.social/xrpc/com.atproto.identity.resolveHandle";
