@@ -11,7 +11,10 @@
     <div id="comments-container"></div>
     <script>
         // Searches your feed for the top-liked post that links to this page
-        discoverPost("kayin.moe");
+        discoverPost("name.bsky.social");
+
+        // A more advanced bersion can be used here, where you can manually set a url. Types are "Oldest", "Latest", and "Top"(most liked). Oldest is default
+        discoverPost("kayin.moe", { "renderOptions": { "discoverURL": "https://kayin.moe/toyification", discoverType: "top"} });
 
         // Loads comments from a post's URI and user DID
         //loadComments("at://did:plc:scmcyemdposb4vuidhztn2ui/app.bsky.feed.post/3lbb32nb4322g")

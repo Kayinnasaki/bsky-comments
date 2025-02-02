@@ -37,17 +37,19 @@ async function loadTemplate(url) {
 // inspired by czue (https://github.com/czue/bluesky-comments)
 // query the author's page to discover the post
 async function discoverPost(authorHandle, options={}) {
-  const currentUrl = window.location.href;
+  const currentUrl = options.renderOptions?.discoverURL || window.location.href;
+  const discoverType = options.renderOptions?.discoverType || "oldest";
   const apiUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=*&url=${encodeURIComponent(
     currentUrl
-  )}&author=${authorHandle}&sort=top`;
-
+  )}&author=${authorHandle}&sort=${discoverType}`;
+  console.log(apiUrl);
   try {
     const response = await fetch(apiUrl);
     const data = await response.json();
 
     if (data.posts && data.posts.length > 0) {
-      const post = data.posts[0];
+      // "oldest" isn't real, so sending sort=oldest just gives us Latest, so we take the last post.
+      const post = discoverType === "oldest" ? data.posts[data.posts.length - 1] : data.posts[0];
       loadComments(post.uri, options);
     } else {
       console.log('No matching post found linking to ' + currentUrl);
