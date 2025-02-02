@@ -36,7 +36,7 @@ async function loadTemplate(url) {
 
 // inspired by czue (https://github.com/czue/bluesky-comments)
 // query the author's page to discover the post
-async function discoverPost(authorHandle) {
+async function discoverPost(authorHandle, options={}) {
   const currentUrl = window.location.href;
   const apiUrl = `https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=*&url=${encodeURIComponent(
     currentUrl
@@ -48,7 +48,7 @@ async function discoverPost(authorHandle) {
 
     if (data.posts && data.posts.length > 0) {
       const post = data.posts[0];
-      loadComments(post.uri);
+      loadComments(post.uri, options);
     } else {
       console.log('No matching post found linking to ' + currentUrl);
     }
