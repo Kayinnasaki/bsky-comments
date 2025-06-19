@@ -220,7 +220,7 @@ async function loadComments(rootPostId, options={}) {
     // Embeds and Posts have data in slightly different places. This feels flimsy? 
     const author = comment.post?.author ?? comment.record?.author ?? "";
     const record = comment.post?.record ?? comment.record?.value ?? "";
-    const embeds = comment.post?.embed ?? comment.record?.embeds[0] ?? "";
+    const embeds = comment.post?.embed ?? comment.record?.embeds?.[0] ?? "";
     const uri = comment.post?.uri ?? comment.record?.uri ?? "";
 
     // So the host can get fancy CSS and look extra important
